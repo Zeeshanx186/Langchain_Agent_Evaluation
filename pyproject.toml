@@ -1,0 +1,23 @@
+[project]
+name = "langchain-agent-evaluation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Zeeshan", email = "zeeshanyaqoob.beef20@iba-suk.edu.pk" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "deepeval>=4.3.1",
+    "langchain>=1.4.7",
+    "langchain-openai>=0.3.0",
+    "mlflow>=3.17.2",
+    "python-dotenv>=1.0.1",
+]
+
+[project.scripts]
+langchain-agent-evaluation = "langchain_agent_evaluation:main"
+
+[build-system]
+requires = ["uv_build>=0.12.0,<0.13.0"]
+build-backend = "uv_build"
