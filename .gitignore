@@ -18,8 +18,20 @@ mlflow.db
 mlruns/
 .deepeval/
 
-# Temporary & Lock files
+# Temporary, Document & Lock files
 ~$*
 *.tmp
+*.docx
+
+# IDE & Agent Configs
+.agents/
+AGENTS.md
+
+# Scratch & Session Logs
+Docs/SESSION_*
+Docs/TERMINAL_*
+experiments/
+image/
+src/
 
 
