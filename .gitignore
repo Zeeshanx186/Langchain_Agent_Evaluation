@@ -34,4 +34,9 @@ experiments/
 image/
 src/
 
-
+# AI assistant folders and outputs
+.claude/
+.cursor/
+.codex/
+CLAUDE.md
+Claude outputs/

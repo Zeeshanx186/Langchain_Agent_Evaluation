@@ -1,6 +1,6 @@
 # Customer Support Refund Agent & Evaluation Pipeline
 
-An automated, intelligent customer support refund agent built with **LangChain**, **LangGraph**, and **Z.AI (GLM-5.3-Flash)**. The system investigates refund requests, validates eligibility against strict business policies, executes authorized refunds through tools, and maintains multi-turn conversation memory.
+An automated, intelligent customer support refund agent built with **LangChain** and **LangGraph**, and evaluated with **DeepEval** and **MLflow**. Both the agent and the DeepEval judge run on **Gemini (`gemini-3.8-flash-low`) through the Antigravity `agy` CLI**. The system investigates refund requests, validates eligibility against strict business policies, executes authorized refunds through tools, and maintains multi-turn conversation memory.
 
 ---
 
@@ -11,7 +11,7 @@ flowchart TD
     User([Customer]) <--> Agent[LangChain / LangGraph Agent]
   
     subgraph Reasoning & Memory
-        Agent <--> LLM[Z.AI GLM-5.3-Flash via OpenAI API]
+        Agent <--> LLM[gemini-3.8-flash-low via Antigravity agy CLI]
         Agent <--> Memory[InMemorySaver Checkpointer]
         Agent --> Prompt[Advanced XML System Prompt]
     end
@@ -32,10 +32,11 @@ flowchart TD
 
 ## Key Features Built So Far
 
-1. **Z.AI GLM Integration**:
+1. **LLM Runtime (`agent/models.py`, `evaluations/model.py`)**:
 
-   - Connected to **Z.AI**'s OpenAI-compatible endpoint using the cost-effective and high-speed **`glm-5.3-flash`** model.
-   - Seamless integration with LangChain's `init_chat_model` and `langchain-openai`.
+   - The agent uses a custom LangChain `BaseChatModel` (`AntigravityChatModel`) and the DeepEval judge uses a custom `DeepEvalBaseLLM` (`AntigravityJudgeModel`). Both call the Antigravity **`agy`** CLI with **`gemini-3.8-flash-low`**.
+   - Override the models with `ANTIGRAVITY_AGENT_MODEL` and `ANTIGRAVITY_EVAL_MODEL`.
+   - Early iterations used Z.AI's OpenAI-compatible endpoint (GLM); the current code does not call it.
 2. **Strict Refund Policy Guardrails**:
 
    - **Time Window**: Refunds are strictly valid only within **30 days** of purchase (`0 <= current_date - purchase_date <= 30 days`).
@@ -65,10 +66,9 @@ flowchart TD
 ```text
 Langchain_Agent_Evaluation/
 ├── agent/
-│   ├── __init__.py
 │   ├── agent.py               # Agent graph definition & interactive conversation runner
 │   ├── data.py                # Mock database of customer orders & purchase dates
-│   ├── models.py              # LLM initialization (Antigravity local zero-cost model / Z.AI)
+│   ├── models.py              # LLM wrapper: agent model via Antigravity agy CLI
 │   ├── objects.py             # Pydantic schemas (Answer, PurchaseItem)
 │   ├── prompts.py             # Advanced system prompt & policy guidelines
 │   └── tools.py               # LangChain tools for history, date, refund math, & ticketing
@@ -103,6 +103,7 @@ Langchain_Agent_Evaluation/
 
 - Python `>=3.12`
 - [`uv`](https://docs.astral.sh/uv/) package manager installed
+- **Antigravity `agy` CLI installed, signed in, and on your `PATH`.** The agent and the judge both shell out to `agy`, so nothing runs without it.
 
 ### 2. Install Dependencies
 
@@ -112,18 +113,18 @@ uv sync
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in the project root (or copy from `.env.example`):
+Copy `.env.example` to `.env`. The current `agy` runtime does not need an API key; the variables are kept for an OpenAI-compatible backend:
 
 ```dotenv
-# Z.AI / Zhipu GLM Configuration
-ZAI_API_KEY="your_z_ai_api_key_here"
-ZAI_BASE_URL="https://api.z.ai/api/paas/v4/"
-ZAI_MODEL="glm-5.3-flash"
-
-# Optional standard OpenAI aliases
-OPENAI_API_KEY="your_z_ai_api_key_here"
+OPENAI_API_KEY="your-api-key-here"
 OPENAI_BASE_URL="https://api.z.ai/api/paas/v4/"
+
+# Optional model overrides for the agy runtime
+# ANTIGRAVITY_AGENT_MODEL="gemini-3.8-flash-low"
+# ANTIGRAVITY_EVAL_MODEL="gemini-3.8-flash-low"
 ```
+
+Never commit `.env`; it is git-ignored.
 
 ---
 
@@ -180,7 +181,7 @@ Through 4 iterative engineering cycles, the agent achieved a **100% pass rate (4
 | **Tool Correctness** | Single-Turn | 85.7% | **100.0%** (7/7) | **1.00** | PASS |
 | **Answer Correctness** | GEval (LLM Judge) | 85.7% | **100.0%** (7/7) | **1.00** | PASS |
 | **Argument Correctness** | Single-Turn | 28.6% | **100.0%** (7/7) | **1.00** | PASS |
-| **Full Suite Aggregate**| **All 7 Metrics** | **~60.0%** | **100.0% (49/49)**| **1.00** | **PERFECT** |
+| **Full Suite Aggregate**| **All 7 Metrics** | **69.4% (34/49)** | **100.0% (49/49)**| **1.00** | **PERFECT** |
 
 ![Final 100% Evaluation Terminal](assets/terminal_final_100.png)
 *Figure 1: Unified evaluation runner executing all 7 metrics with a 100% pass rate.*
@@ -261,3 +262,18 @@ Open **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser to inspe
 
 ![MLflow Metrics Dashboard](assets/mlflow_dashboard.png)
 *Figure 3: MLflow Experiment Tracking dashboard displaying the historical progression across all runs, concluding with the latest 100% pass run (49/49 passed).*
+
+---
+
+## Limitations
+
+- **Small, synthetic test set:** 7 hand-written scenarios × 7 metrics = 49 checks. 49/49 shows the agent handles these cases, not that it generalizes.
+- **Same model family on both sides:** the agent and the LLM judge are both `gemini-3.8-flash-low`, so the judge may share the agent's blind spots.
+- **Prompt tuned against the suite:** the fixes above were made while looking at these same test cases.
+- **Needs `agy`:** the runtime depends on the Antigravity CLI rather than a standard API.
+
+**Next steps:** larger and messier test cases (ambiguous requests, typos, adversarial users, multi-item edge cases), a held-out set, and a judge from a different model family.
+
+## License
+
+[MIT](LICENSE)
